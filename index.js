@@ -185,4 +185,13 @@ app.get("/wallets/:id/summary", async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Endpoints:`);
+  console.log(`  GET    /wallets`);
+  console.log(`  POST   /wallets`);
+  console.log(`  DELETE /wallets/:id`);
+  console.log(`  GET    /wallets/:id/transactions`);
+  console.log(`  POST   /wallets/:id/transactions`);
+  console.log(`  DELETE /transactions/:id`);
+  console.log(`  GET    /wallets/:id/balance`);
+  console.log(`  GET    /wallets/:id/summary`);
 });
