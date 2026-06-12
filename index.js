@@ -183,6 +183,114 @@ app.get("/wallets/:id/summary", async (req, res) => {
   }
 });
 
+app.get("/wallets/:id/transactions/filter", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const wallet = await prisma.wallet.findUnique({ where: { id } });
+    if (!wallet) {
+      return res.status(404).json({ error: "Wallet tidak ditemukan" });
+    }
+
+    const { type, category, from, to } = req.query;
+    const where = { walletId: id };
+
+    if (type) where.type = type;
+    if (category) where.category = category;
+    if (from || to) {
+      where.date = {};
+      if (from) where.date.gte = new Date(from);
+      if (to) where.date.lte = new Date(to);
+    }
+
+    const transactions = await prisma.transaction.findMany({
+      where,
+      orderBy: { date: "desc" },
+    });
+
+    res.json(transactions);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/wallets/:id/transactions/monthly", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const wallet = await prisma.wallet.findUnique({ where: { id } });
+    if (!wallet) {
+      return res.status(404).json({ error: "Wallet tidak ditemukan" });
+    }
+
+    const transactions = await prisma.transaction.findMany({
+      where: { walletId: id },
+      orderBy: { date: "desc" },
+    });
+
+    const monthly = {};
+    transactions.forEach((t) => {
+      const key = t.date.toISOString().slice(0, 7);
+      if (!monthly[key]) {
+        monthly[key] = { income: 0, expense: 0, count: 0 };
+      }
+      monthly[key].count++;
+      if (t.type === "income") monthly[key].income += t.amount;
+      else monthly[key].expense += t.amount;
+    });
+
+    const result = Object.keys(monthly).sort().reverse().map((m) => ({
+      month: m,
+      income: monthly[m].income,
+      expense: monthly[m].expense,
+      net: monthly[m].income - monthly[m].expense,
+      count: monthly[m].count,
+    }));
+
+    res.json({ walletId: id, walletName: wallet.name, monthly: result });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/wallets/overview", async (req, res) => {
+  try {
+    const wallets = await prisma.wallet.findMany({
+      include: { transactions: true },
+    });
+
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    const result = wallets.map((w) => {
+      let wIncome = 0;
+      let wExpense = 0;
+      w.transactions.forEach((t) => {
+        if (t.type === "income") wIncome += t.amount;
+        else wExpense += t.amount;
+      });
+      totalIncome += wIncome;
+      totalExpense += wExpense;
+      return {
+        id: w.id,
+        name: w.name,
+        currency: w.currency,
+        totalIncome: wIncome,
+        totalExpense: wExpense,
+        balance: wIncome - wExpense,
+        transactionCount: w.transactions.length,
+      };
+    });
+
+    res.json({
+      totalIncome,
+      totalExpense,
+      totalBalance: totalIncome - totalExpense,
+      wallets: result,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Endpoints:`);
@@ -194,4 +302,8 @@ app.listen(PORT, () => {
   console.log(`  DELETE /transactions/:id`);
   console.log(`  GET    /wallets/:id/balance`);
   console.log(`  GET    /wallets/:id/summary`);
+  console.log(`  ------- Bonus -------`);
+  console.log(`  GET    /wallets/:id/transactions/filter?type=&category=&from=&to=`);
+  console.log(`  GET    /wallets/:id/transactions/monthly`);
+  console.log(`  GET    /wallets/overview`);
 });

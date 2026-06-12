@@ -26,6 +26,14 @@ Server jalan di `http://localhost:3000`
 | GET | `/wallets/:id/balance` | Hitung saldo |
 | GET | `/wallets/:id/summary` | Ringkasan per kategori |
 
+### Bonus
+
+| Method | Endpoint | Keterangan |
+|--------|----------|------------|
+| GET | `/wallets/:id/transactions/filter?type=&category=&from=&to=` | Filter transaksi |
+| GET | `/wallets/:id/transactions/monthly` | Ringkasan transaksi per bulan |
+| GET | `/wallets/overview` | Overview semua wallet |
+
 ## Contoh Request
 
 **Buat wallet:**
@@ -44,10 +52,22 @@ curl -X POST http://localhost:3000/wallets/1/transactions \
   -d '{"amount":75000,"type":"expense","category":"food","date":"2025-01-20","note":"Makan siang"}'
 ```
 
-**Lihat saldo:**
+**Filter transaksi income di bulan Januari:**
 
 ```bash
-curl http://localhost:3000/wallets/1/balance
+curl "http://localhost:3000/wallets/1/transactions/filter?type=income&from=2025-01-01&to=2025-01-31"
+```
+
+**Lihat ringkasan bulanan:**
+
+```bash
+curl http://localhost:3000/wallets/1/transactions/monthly
+```
+
+**Overview semua wallet:**
+
+```bash
+curl http://localhost:3000/wallets/overview
 ```
 
 ## Struktur File
